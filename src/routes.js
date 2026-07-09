@@ -40,7 +40,22 @@ router.delete('/recipes/:id', async (req, res) => {
 router.post('/recipes', async (req, res) => {
 	const db = await getDbConnection()
 	const { title, ingredients, method } = req.body
-	await db.run('INSERT INTO recipes (title, ingredients, method) VALUES (?, ?, ?)', [title, ingredients, method])
+
+	if (!title || !title.trim()) {
+		const recipes = await db.all('SELECT * FROM recipes')
+		return res.status(400).render('recipes', {
+			recipes,
+			errorMessage: 'Recipe title is required',
+			formData: {
+				title: '',
+				ingredients,
+				method,
+			},
+			showAddForm: true,
+		})
+	}
+
+	await db.run('INSERT INTO recipes (title, ingredients, method) VALUES (?, ?, ?)', [title.trim(), ingredients, method])
 	res.redirect('/recipes')
 })
 

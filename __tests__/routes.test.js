@@ -65,6 +65,29 @@ describe('Routes', () => {
     expect(recipe.title).toBe(newRecipe.title);
   });
 
+  test('POST /recipes should return 400 when title is empty', async () => {
+    const response = await request(app)
+      .post('/recipes')
+      .send({
+        title: '   ',
+        ingredients: 'Test ingredients',
+        method: 'Test method'
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.view).toBe('recipes');
+    expect(response.body.locals.errorMessage).toBe('Recipe title is required');
+    expect(response.body.locals.showAddForm).toBe(true);
+    expect(response.body.locals.formData).toEqual({
+      title: '',
+      ingredients: 'Test ingredients',
+      method: 'Test method'
+    });
+
+    const recipes = await db.all('SELECT * FROM recipes');
+    expect(recipes).toEqual([]);
+  });
+
   test('DELETE /recipes/:id should remove the recipe and return 404 afterwards', async () => {
     const insertedRecipe = await db.run(
       'INSERT INTO recipes (title, ingredients, method) VALUES (?, ?, ?)',
