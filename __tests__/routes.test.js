@@ -64,4 +64,44 @@ describe('Routes', () => {
     expect(recipe).toBeDefined();
     expect(recipe.title).toBe(newRecipe.title);
   });
+
+  test('POST /recipes should return 400 when title is empty', async () => {
+    const response = await request(app)
+      .post('/recipes')
+      .send({
+        title: '   ',
+        ingredients: 'Test ingredients',
+        method: 'Test method'
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.view).toBe('recipes');
+    expect(response.body.locals.errorMessage).toBe('Recipe title is required');
+    expect(response.body.locals.showAddForm).toBe(true);
+    expect(response.body.locals.formData).toEqual({
+      title: '',
+      ingredients: 'Test ingredients',
+      method: 'Test method'
+    });
+
+    const recipes = await db.all('SELECT * FROM recipes');
+    expect(recipes).toEqual([]);
+  });
+
+  test('DELETE /recipes/:id should remove the recipe and return 404 afterwards', async () => {
+    const insertedRecipe = await db.run(
+      'INSERT INTO recipes (title, ingredients, method) VALUES (?, ?, ?)',
+      ['Delete Test Recipe', 'Delete ingredients', 'Delete method']
+    );
+
+    const deleteResponse = await request(app).delete(`/recipes/${insertedRecipe.lastID}`);
+    expect(deleteResponse.status).toBe(302);
+    expect(deleteResponse.headers.location).toBe('/recipes');
+
+    const deletedRecipe = await db.get('SELECT * FROM recipes WHERE id = ?', [insertedRecipe.lastID]);
+    expect(deletedRecipe).toBeUndefined();
+
+    const missingRecipeResponse = await request(app).get(`/recipes/${insertedRecipe.lastID}`);
+    expect(missingRecipeResponse.status).toBe(404);
+  });
 });
